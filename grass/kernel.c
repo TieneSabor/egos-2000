@@ -19,6 +19,16 @@
 #define EXCP_ID_ECALL_U    8
 #define EXCP_ID_ECALL_M    11
 
+#define INTR_ID_SOFT 3
+#define INTR_ID_TIMER 7
+
+static void proc_yield();
+static void proc_syscall();
+static void (*kernel_entry)();
+
+int proc_curr_idx;
+struct process proc_set[MAX_NPROCESS];
+
 void excp_entry(int id) {
     /* Student's code goes here (system call and memory exception). */
 
@@ -27,18 +37,32 @@ void excp_entry(int id) {
     /* Otherwise, kill the process if curr_pid is a user application */
 
     /* Student's code ends here. */
-    FATAL("excp_entry: kernel got exception %d", id);
+    if (((id != EXCP_ID_ECALL_M) && (id != EXCP_ID_ECALL_U)) && curr_pid >= GPID_USER_START) {
+        /* User process killed by ctrl+c interrupt */
+        INFO("process %d killed by interrupt", curr_pid);
+        asm("csrw mepc, %0" ::"r"(0x800500C));
+        return;
+    }
+
+    // struct syscall *sc = (struct syscall *) SYSCALL_ARG;
+    // int type = sc->type;
+    // INFO("id: %d, type: %d", id, type);
+
+    kernel_entry = proc_syscall;
+
+    /* Now on the kernel stack */
+    int mepc;
+    asm("csrr %0, mepc"
+        : "=r"(mepc));
+
+    /* Switch back to the user application stack */
+    mepc = mepc + 4;
+    asm("csrw mepc, %0" ::"r"(mepc));
+    /* Switch to the kernel stack */
+    ctx_start(&proc_set[proc_curr_idx].sp, (void *) GRASS_STACK_TOP);
+
+    // FATAL("excp_entry: kernel got exception %d", id);
 }
-
-#define INTR_ID_SOFT       3
-#define INTR_ID_TIMER      7
-
-static void proc_yield();
-static void proc_syscall();
-static void (*kernel_entry)();
-
-int proc_curr_idx;
-struct process proc_set[MAX_NPROCESS];
 
 void intr_entry(int id) {
     if (id == INTR_ID_TIMER && curr_pid < GPID_SHELL) {
@@ -68,7 +92,8 @@ void intr_entry(int id) {
 void ctx_entry() {
     /* Now on the kernel stack */
     int mepc, tmp;
-    asm("csrr %0, mepc" : "=r"(mepc));
+    asm("csrr %0, mepc"
+        : "=r"(mepc));
     proc_set[proc_curr_idx].mepc = (void*) mepc;
 
     /* kernel_entry() is either proc_yield() or proc_syscall() */
@@ -195,4 +220,9 @@ static void proc_syscall() {
     default:
         FATAL("proc_syscall: got unknown syscall type=%d", type);
     }
+
+    // int i = 0;
+    // for (int j = 0; j < 10000000; j++) {
+    //     i++;
+    // }
 }
