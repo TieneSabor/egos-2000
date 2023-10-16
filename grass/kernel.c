@@ -39,7 +39,7 @@ void excp_entry(int id) {
     /* Student's code ends here. */
     if (((id != EXCP_ID_ECALL_M) && (id != EXCP_ID_ECALL_U)) && curr_pid >= GPID_USER_START) {
         /* User process killed by ctrl+c interrupt */
-        INFO("process %d killed by interrupt", curr_pid);
+        INFO("process %d terminated with exception %d", curr_pid, id);
         asm("csrw mepc, %0" ::"r"(0x800500C));
         return;
     }
