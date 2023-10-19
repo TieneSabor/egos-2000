@@ -12,8 +12,12 @@
 #include "app.h"
 #include <string.h>
 
+#define testStart 0x08000000
+#define testEnd 0x08002800
+
 int main() {
-    memset((void*)FRAME_CACHE_START, 0, FRAME_CACHE_END - FRAME_CACHE_START);
+    // memset((void*)FRAME_CACHE_START, 0, FRAME_CACHE_END - FRAME_CACHE_START);
+    memset((void *) testStart, 0, testEnd - testStart);
     /* If the OS protects memory correctly,
      * this memset should trigger an exception, killing this application;
      * Otherwise, the following message will be printed

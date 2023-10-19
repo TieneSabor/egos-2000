@@ -38,6 +38,7 @@ void excp_entry(int id) {
 
     /* Student's code ends here. */
     if (((id != EXCP_ID_ECALL_M) && (id != EXCP_ID_ECALL_U)) && curr_pid >= GPID_USER_START) {
+        // if (((id != EXCP_ID_ECALL_M) && (id != EXCP_ID_ECALL_U))) {
         /* User process killed by ctrl+c interrupt */
         INFO("process %d terminated with exception %d", curr_pid, id);
         asm("csrw mepc, %0" ::"r"(0x800500C));
@@ -129,6 +130,19 @@ static void proc_yield() {
     /* Modify mstatus.MPP to enter machine or user mode during mret
      * depending on whether curr_pid is a grass server or a user app
      */
+
+    int mstatus;
+    asm("csrr %0, mstatus"
+        : "=r"(mstatus));
+    if (curr_pid < GPID_SHELL) {
+        // grass server
+        asm("csrw mstatus, %0" ::"r"(mstatus | (3 << 11)));
+    } else {
+        // user app
+        int update = (mstatus & ~(3 << 11));
+        asm("csrw mstatus, %0" ::"r"(update));
+        // asm("csrw mstatus, %0" ::"r"(mstatus | (3 << 11)));
+    }
 
     /* Student's code ends here. */
 

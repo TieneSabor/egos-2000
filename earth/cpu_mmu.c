@@ -155,6 +155,13 @@ int page_table_switch(int pid) {
     /* Student's code ends here. */
 }
 
+// inline int
+// pmpcfg(int loc, int L, int A, int X, int W, int R) {
+//     return ((L << 7) | (A << 3) | (X << 2) | (W << 1) | (R)) << (loc << 3);
+// }
+
+#define PMPCFG(LOC, L, A, X, W, R) (((L << 7) | (A << 3) | (X << 2) | (W << 1) | (R)) << (LOC << 3))
+
 /* MMU Initialization */
 void mmu_init() {
     /* Initialize the paging device */
@@ -169,14 +176,40 @@ void mmu_init() {
     asm("csrw pmpcfg0, %0" : : "r" (0xF));
 
     /* Student's code goes here (PMP memory protection). */
-
+    int oricfg;
     /* Setup PMP TOR region 0x00000000 - 0x20000000 as r/w/x */
+    // asm("csrw pmpaddr1, %0"
+    //     :
+    //     : "r"(0x00000000 >> 2));
+    asm("csrw pmpaddr0, %0"
+        :
+        : "r"(0x20000000 >> 2));
+    // int cfg1 = PMPCFG(1, 1, 0, 1, 1, 1);
+    int cfg0 = PMPCFG(0, 1, 1, 1, 1, 1);
 
     /* Setup PMP NAPOT region 0x20400000 - 0x20800000 as r/-/x */
+    asm("csrw pmpaddr1, %0"
+        :
+        : "r"((0x20400000 >> 2) | ((1 << 19) - 1)));
+    int cfg1 = PMPCFG(1, 1, 3, 1, 0, 1);
 
     /* Setup PMP NAPOT region 0x20800000 - 0x20C00000 as r/-/- */
+    asm("csrw pmpaddr2, %0"
+        :
+        : "r"((0x20800000 >> 2) | ((1 << 19) - 1)));
+    int cfg2 = PMPCFG(2, 1, 3, 0, 0, 1);
 
     /* Setup PMP NAPOT region 0x80000000 - 0x80004000 as r/w/- */
+    asm("csrw pmpaddr3, %0"
+        :
+        : "r"((0x80000000 >> 2) | ((1 << 11) - 1)));
+    int cfg3 = PMPCFG(3, 1, 3, 0, 1, 1);
+
+    asm("csrr %0, pmpcfg0"
+        : "=r"(oricfg));
+    asm("csrw pmpcfg0, %0"
+        :
+        : "r"(oricfg | cfg0 | cfg1 | cfg2 | cfg3));
 
     /* Student's code ends here. */
 
