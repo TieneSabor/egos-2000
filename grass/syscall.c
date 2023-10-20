@@ -20,7 +20,11 @@ static void sys_invoke() {
     asm("ecall");
     // *((int*)0x2000000) = 1;
     // INFO("Invoke af ecall");
-    while (sc->type != SYS_UNUSED);
+    // the while loop in sys_invoke for software interrupts is used to wait for 
+    // the completion of a system call, whereas exceptions are handled immediately 
+    // by their respective exception handlers, and there is no need to wait 
+    // for them to return a result.
+    // while (sc->type != SYS_UNUSED);
 }
 
 int sys_send(int receiver, char* msg, int size) {
